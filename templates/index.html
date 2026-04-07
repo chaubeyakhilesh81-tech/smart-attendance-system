@@ -1,0 +1,123 @@
+<!-- templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance System</title>
+
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial;
+            background: #f5f5f5;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        video {
+            border: 2px solid black;
+            border-radius: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 15px;
+            cursor: pointer;
+            background: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background: gray;
+            cursor: not-allowed;
+        }
+
+        button:hover {
+            background: darkgreen;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>📸 Face Attendance System</h2>
+
+    <video id="video" autoplay playsinline width="300"></video>
+
+    <br><br>
+
+    <!-- 🔒 Disabled by default -->
+    <button id="btn" onclick="capture()" disabled>Mark Attendance</button>
+
+    <script>
+        let video = document.getElementById("video");
+        let btn = document.getElementById("btn");
+
+        // Start camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+
+            // When camera ready
+            video.onloadedmetadata = () => {
+                console.log("Camera Ready ✅");
+                btn.disabled = false; // enable button
+            };
+        })
+        .catch(err => {
+            alert("Camera access denied ❌");
+        });
+
+        function capture() {
+
+            // Extra safety
+            if (!video.videoWidth) {
+                alert("Wait... Camera starting ⏳");
+                return;
+            }
+
+            let canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            canvas.getContext("2d").drawImage(video, 0, 0);
+
+            let image = canvas.toDataURL("image/jpeg", 0.7);
+
+            // Image check
+            if (!image || image.length < 100) {
+                alert("Image capture failed ❌");
+                return;
+            }
+
+            fetch("/recognize", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ image: image })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                } else if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert("Something went wrong ❌");
+                }
+            })
+            .catch(err => {
+                alert("Server error ❌");
+            });
+        }
+    </script>
+
+</body>
+</html>
